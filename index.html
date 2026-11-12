@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#074a76">
+  <meta name="description" content="ComparIA Grupo Ramos — comparativos de cotizaciones y evaluación de proveedores con precios, condiciones comerciales y ranking ponderado.">
+  <title>ComparIA · Grupo Ramos | Evaluación de Proveedores</title>
+  <link rel="icon" href="assets/grupo-ramos.png">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.13.0/mammoth.browser.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="db-config.js"></script>
+  <script defer src="shared-history.js"></script>
+  <script defer src="parser.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="appbar no-print">
+      <div class="appbar-left">
+        <img src="assets/grupo-ramos.png" alt="Grupo Ramos" class="app-logo">
+        <div class="appbar-sep"></div>
+        <div><strong>ComparIA</strong><small>Evaluación de proveedores</small></div>
+        <span class="demo-tag" id="demo-tag">DEMO · DATOS FICTICIOS</span>
+      </div>
+      <div class="appbar-actions">
+        <button class="btn btn-outline" data-action="load-demo" title="Restablecer ejemplo ficticio">↺ Ejemplo</button>
+        <button class="btn btn-outline" data-action="configure" title="Configurar comparativo">⚙ Configurar</button>
+        <button class="btn btn-outline" data-action="toggle-upload">＋ Cotizaciones</button>
+        <button class="btn btn-outline" data-action="history" title="Ver comparativos del equipo">◷ Historial compartido</button>
+        <button class="btn btn-primary" data-action="share-save" title="Guardar versión en historial compartido">☁ Guardar</button>
+        <button class="btn btn-primary" data-action="pdf">↓ PDF</button>
+        <button class="btn btn-primary btn-secondary" data-action="excel">↓ Excel</button>
+      </div>
+    </header>
+    <main>
+      <section class="setup no-print hidden" id="setup">
+        <div class="setup-head"><div><strong>Preparar comparativo</strong><p>Arrastra tus cotizaciones o añade un proveedor manualmente. Revisa los datos antes de evaluar.</p></div><button class="icon-button" data-action="toggle-upload" aria-label="Cerrar">✕</button></div>
+        <div class="setup-tools">
+          <label>Proyecto o licitación <input id="project-input" placeholder="Nombre del proyecto"></label>
+          <label>Solicitud / folio <input id="request-input" placeholder="COMP-2026-0001"></label>
+          <label>Fecha <input id="date-input" type="date"></label>
+        </div>
+        <label class="upload-box" id="dropzone"><input type="file" id="files" accept=".pdf,.xlsx,.docx,.csv,.txt,.png,.jpg,.jpeg,.webp" multiple hidden><span class="upload-icon">⇧</span><strong>Selecciona archivos o arrástralos aquí</strong><small>PDF, Excel, Word, CSV e imágenes. Extracción orientativa con OCR; debes validar los resultados.</small></label>
+        <div class="setup-lower"><div id="file-status" role="status">Sin archivos nuevos.</div><div class="setup-buttons"><button class="btn btn-outline" data-action="edit-items">Editar artículos solicitados</button><button class="btn btn-outline" data-action="add-supplier">＋ Añadir proveedor</button><button class="btn btn-outline danger-text" data-action="clear">Vaciar comparativo</button></div></div>
+        <div class="loaded-files" id="loaded-files"></div>
+      </section>
+      <section class="shared-history hidden no-print" id="shared-history" aria-label="Historial compartido de comparativos">
+        <div class="history-head">
+          <div><span class="section-kicker">BIBLIOTECA DEL EQUIPO</span><h2>Comparativos guardados</h2><p>Consulta los análisis que hayan publicado otros compradores. Puedes volver a abrirlos, ver sus proveedores y descargar PDF o Excel.</p></div>
+          <button class="icon-button" data-action="history-close" aria-label="Cerrar historial">✕</button>
+        </div>
+        <div class="history-controls">
+          <label class="search-label">Buscar por proyecto, folio o proveedor
+            <input id="history-search" type="search" placeholder="Ej. refrigeración, COMP-2026, Costa Azul" autocomplete="off">
+          </label>
+          <button class="btn btn-outline" data-action="history-refresh">↻ Actualizar historial</button>
+          <button class="btn btn-outline" data-action="history-share-link">↗ Copiar enlace del historial</button>
+          <button class="btn btn-outline" data-action="history-auth" id="history-auth-btn">Acceso para guardar</button>
+        </div>
+        <div id="history-connection" class="history-connection" role="status">Comprobando conexión del historial…</div>
+        <div id="history-results" class="history-results"></div>
+        <div class="history-note">Los registros publicados conservan una copia de los datos estructurados del comparativo, no los PDF originales de los proveedores. Los registros solo se pueden consultar según los permisos configurados en Supabase; una versión guardada no puede sobrescribirse desde la página.</div>
+      </section>
+      <article class="report" id="report">
+        <header class="report-header">
+          <div class="report-brand"><img src="assets/grupo-ramos.png" alt="Logo Grupo Ramos"><div class="brand-name">Compar<span>IA</span><small>Compras · Grupo Ramos</small></div></div>
+          <div class="report-headline"><h1>Comparativo de Cotizaciones y Evaluación de Proveedores</h1><div class="report-info"><span>Proyecto: <b id="project-text">Equipamiento Área de Preparación</b></span><span>Solicitud: <b id="request-text">COMP-2026-0148</b></span><span>Fecha: <b id="date-text">11/11/2026</b></span></div></div>
+        </header>
+        <div class="rate-strip"><div class="rate-label"><b>Moneda base: DOP</b><span id="rate-text">Precios expresados en pesos dominicanos</span></div><button class="tiny-btn no-print" data-action="rates">Configurar tasas ↗</button></div>
+        <div class="section-heading"><span>01</span><h2>Comparativo económico por ítem</h2><p>Cantidad cotizada, precio unitario y total de cada proveedor</p></div>
+        <div class="responsive-table"><table class="comparison-table" id="comparison-table"></table></div>
+        <div class="section-grid">
+          <section class="report-section"><div class="section-title">Condiciones comerciales</div><div class="responsive-table"><table class="minor-table" id="terms-table"></table></div></section>
+          <section class="report-section"><div class="section-title section-title-accent">Evaluación por factores <button class="tiny-btn no-print" data-action="weights">Editar ponderaciones</button></div><div class="responsive-table"><table class="minor-table" id="score-table"></table></div></section>
+        </div>
+        <section class="results-row" id="results-row"><div class="result-box"><div class="box-kicker">RESULTADO FINAL</div><div class="result-trophy">★</div><div class="winner-intro">Proveedor recomendado:</div><div class="winner-name" id="winner-name">Pendiente</div><div class="winner-points" id="winner-points">Revisa las ofertas para determinar el ganador</div></div>
+          <div class="ranking-box"><div class="section-title">Ranking de proveedores</div><table id="ranking-table" class="ranking-table"></table></div>
+          <div class="recommendation-box"><div class="rec-head">✓ <span>Recomendación</span></div><p id="recommendation">Carga y revisa las cotizaciones para generar una evaluación.</p><div class="rec-foot" id="recommendation-foot">Puntajes orientativos sujetos a validación.</div></div></section>
+        <div class="warnings" id="warnings" aria-live="polite"></div>
+        <div id="shared-save-banner" class="shared-save-banner no-print"><span>☁ <b>Historial compartido:</b> guarda la versión final para que otros miembros del equipo la consulten desde el mismo enlace.</span><button class="btn btn-primary" data-action="share-save">Guardar y compartir versión</button></div>
+        <footer class="report-footer"><span>ComparIA · Grupo Ramos | Análisis preliminar para Compras. No sustituye validación técnica, financiera ni autorización de adjudicación.</span><img src="assets/formatos-grupo-ramos.png" alt="Formatos comerciales Grupo Ramos"></footer>
+      </article>
+    </main>
+  </div>
+  <dialog id="modal" class="modal no-print"><form method="dialog" id="modal-form"><div class="modal-heading"><div><h2 id="modal-title">Editar</h2><p id="modal-subtitle"></p></div><button value="cancel" class="modal-close" aria-label="Cerrar">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer"><button value="cancel" class="btn btn-outline">Cancelar</button><button type="button" class="btn btn-primary" id="modal-save">Guardar cambios</button></div></form></dialog>
+  <div id="toast" class="toast no-print" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+COMPARIA GRUPO RAMOS - GUIA RAPIDA (HISTORIAL PRIVADO)
+
+1) Descomprime y sube el CONTENIDO a GitHub, no el ZIP.
+2) GitHub → Settings → Pages → Deploy from branch → main → /(root).
+3) Crea proyecto Supabase Free.
+4) En SQL Editor ejecuta 01_historial_publico.sql, SEGUIDO INMEDIATAMENTE de 02_opcional_historial_privado.sql antes de guardar registros.
+5) Agrega correos autorizados: comparia_editors (leer/publicar) y comparia_viewers (solo leer).
+6) Configura inicio GitHub OAuth en Supabase + GitHub OAuth App.
+7) Autoriza URL de GitHub Pages en Supabase Authentication → URL Configuration.
+8) Llena db-config.js con URL y sb_publishable_..., vuelve a subirlo a GitHub.
+9) Prueba con datos FICTICIOS, otro usuario autorizado y acceso anónimo bloqueado.
+
+Todos los detalles y el SQL para copiar están en CONFIGURAR_HISTORIAL.md.
