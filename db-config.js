@@ -1,5 +1,7 @@
-/* Configura solo la URL y la CLAVE PUBLICABLE de Supabase. Nunca coloques una clave secreta/service_role. */
+
+/* Conexión de ComparIA con Supabase */
+
 window.COMPARIA_DB_CONFIG = {
-  url: '', // Ejemplo: https://tuproyecto.supabase.co
-  publishableKey: '' // Ejemplo: sb_publishable_... (o anon pública legacy)
+  url: 'https://xctwqidtzxghpankqojj.supabase.co',
+  publishableKey: 'sb_publishable_jGgwkfyKFlg2L6Z6B84PRw_uX_qP6YC'
 };
